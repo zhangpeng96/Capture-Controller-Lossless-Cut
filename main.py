@@ -63,16 +63,23 @@ class Timer:
 
 ts = Timer()
 
+
+def __win32_event_filter__(msg, data):
+    global listener
+    suppress_map = { 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 107, 110 }
+    if data.vkCode in suppress_map and msg == 256:
+        listener.suppress_event()
+
+
 def on_release(key):
     try:
         keycode = key.vk
     except AttributeError:
         keycode = key.value.vk
 
-    # print(key, type(key), keycode, type(keycode))
     if key == keyboard.Key.esc:
         ts.print()
-        filename = input('输入视频路径 >')
+        filename = input('输入视频路径 > ')
         ts.output_xml(filename=filename)
         return False
     elif key == keyboard.Key.f12 or key == keyboard.Key.f9:
@@ -93,14 +100,8 @@ def on_release(key):
             ts.mark()
             print('Dot')
 
-    # elif key == keyboard.KeyCode.from_vk(96):
-    # # elif key == keyboard.KeyCode.from_char('+'):
-    #     print('get f2')
 
-
-# Collect events until released
 with keyboard.Listener(
-        suppress=True,
-        # on_press=on_press,
-        on_release=on_release) as listener:
+        on_release = on_release,
+        win32_event_filter = __win32_event_filter__) as listener:
     listener.join()

@@ -7,9 +7,9 @@ from pynput import keyboard
 def __win32_event_filter__(msg, data):
     global listener
     print('filter', msg, data)
-    print(listener)
+    # print(listener)
     suppress_map = { 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 107, 110 }
-    if data.vkCode in suppress_map:
+    if data.vkCode in suppress_map and msg == 256:
         listener.suppress_event()
 
 def on_release(key):
