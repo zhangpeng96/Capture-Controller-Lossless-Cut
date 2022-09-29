@@ -45,7 +45,7 @@ class Timer:
     def print(self):
         print(self.map)
 
-    def output_xml(self, filename=''):
+    def output_xml(self, filename='', outfile='test'):
         lines = ['<timelines version="2" >','\t<timeline>','\t\t<group>',
 '\t\t\t<track video="1" audio="1" text="0" accuracy="frame" flags="interlaced_fields_alignment,keep_mpeg_closedcaptions,keep_rtp_hint_tracks" >']
         lines.append( '\t\t\t\t<clip src="{}" start="0" stop="{}" timeFormat="100ns_units" />'.format(filename, self.series()) )
@@ -57,11 +57,10 @@ class Timer:
                 lines.append( '\t\t\t\t<marker time="{}" timeFormat="100ns_units" />'.format(timeline) )
         lines += ['\t\t\t</markers>', '\t\t\t<preview_streams video="0" audio="0" text="-1" />', '\t\t</view>','\t</timeline>','</timelines>']
         fstring = '\n'.join(lines)
-        with open('test.ssp', 'w', encoding='utf-8') as f:
+        with open('{}.ssp'.format(outfile), 'w', encoding='utf-8') as f:
             f.write(fstring)
+        print('已保存档案 {}.ssp'.format(outfile))
 
-
-ts = Timer()
 
 
 def __win32_event_filter__(msg, data):
@@ -78,9 +77,6 @@ def on_release(key):
         keycode = key.value.vk
 
     if key == keyboard.Key.esc:
-        ts.print()
-        filename = input('输入视频路径 > ')
-        ts.output_xml(filename=filename)
         return False
     elif key == keyboard.Key.f12 or key == keyboard.Key.f9:
         ts.start()
@@ -101,7 +97,23 @@ def on_release(key):
             print('Dot')
 
 
-with keyboard.Listener(
-        on_release = on_release,
-        win32_event_filter = __win32_event_filter__) as listener:
-    listener.join()
+while True:
+    print('welcome! ')
+    ts = Timer()
+
+    with keyboard.Listener(
+            on_release = on_release,
+            win32_event_filter = __win32_event_filter__) as listener:
+        listener.join()
+
+    ts.print()
+    outfile = time.strftime("%y%m%d-%H%M",time.localtime())
+    filename = input('输入视频路径 > ')
+    if filename == '':
+        print('跳过')
+        continue
+    else:
+        filename = filename.strip('"')
+    ts.output_xml(filename=filename, outfile=outfile)
+
+
