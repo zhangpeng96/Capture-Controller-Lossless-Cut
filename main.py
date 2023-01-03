@@ -1,19 +1,33 @@
 import time
+from datetime import datetime
 from pynput import keyboard
+from collections import OrderedDict
 
 
 class Timer:
     def __init__(self):
         self.start_time = 0
         self.start_shift = 0
-        self.map = { 0: { 'mark': False, 'select': True } }
+        self.segment = OrderedDict({ 0: True })
+        self.marked = OrderedDict({ 0: False })
 
     def stamp(self):
         return int(time.time() * 10000000)
 
+    def logger(self, timeline, text, type=1):
+        reltime = datetime.fromtimestamp(timeline / 10000000).strftime("%M:%S.%f")
+        abstime = datetime.now().strftime('%H:%M:%S.%f')[:-3]
+        if not self.start_time:
+            print( '[WARN] {} 还未开始'.format(abstime) )
+        else:
+            if type == 0:
+                print( '[HINT] {} {}'.format(abstime, text) )
+            elif type == 1:
+                print( '[INFO] {} {}'.format(reltime, text) )
+
     def series(self, shift=0):
         if shift:
-            ans = self.stamp() - self.start_time + int(shift*10000000)
+            ans = self.stamp() - self.start_time + int(shift * 10000000)
             if ans > 0:
                 return ans
             else:
@@ -23,44 +37,64 @@ class Timer:
 
     def start(self):
         self.start_time = self.stamp()
+        self.segment = OrderedDict({ 0: True })
+        self.marked = OrderedDict({ 0: False })
 
-    def mark(self, select=False):
+    def mark(self):
         key = self.series()
-        self.map[key] = { 'mark': True, 'select': select }
+        self.marked[key] = True
 
     def select(self):
         key = self.series()
-        self.map[key] = { 'mark': False, 'select': True }
+        self.segment[key] = True
+        self.logger(key, '√')
 
     def remove(self):
         key = self.series()
-        self.map[key] = { 'mark': False, 'select': False }
+        self.segment[key] = False
+        self.logger(key, '×')
 
     def backout(self, second):
-        back_key = self.series(-1 * second)
-        self.map[back_key] = { 'mark': False, 'select': False }
-        key = self.series()
-        self.map[key] = { 'mark': False, 'select': True }
+        remove_start, remove_end = self.series(-1 * second), self.series()
+        self.segment[remove_start] = False
+        self.segment[remove_end] = True
+        self.logger(remove_start, '×┓')
+        self.logger(remove_end, '√┛')
 
-    def print(self):
-        print(self.map)
+    def refresh(self):
+        # point = True
+        self.segment = sorted(self.segment.items(), key=lambda x:x[0])
+        # for timeline, flag in self.segment.items():
+        #     if flag == point:
+        #         start = timeline
+        #         point = not point
+        #     else:
 
-    def output_xml(self, filename='', outfile='test'):
-        lines = ['<timelines version="2" >','\t<timeline>','\t\t<group>',
-'\t\t\t<track video="1" audio="1" text="0" accuracy="frame" flags="interlaced_fields_alignment,keep_mpeg_closedcaptions,keep_rtp_hint_tracks" >']
-        lines.append( '\t\t\t\t<clip src="{}" start="0" stop="{}" timeFormat="100ns_units" />'.format(filename, self.series()) )
-        lines += ['\t\t\t</track>','\t\t</group>', '\t\t<view>', '\t\t\t<markers>']
-        for timeline, flag in sorted(self.map.items(), key=lambda x:x[0]):
-            if flag['select']:
-                lines.append( '\t\t\t\t<marker time="{}" timeFormat="100ns_units" flags="select_interval"/>'.format(timeline) )
+    def generate(self, source='', output=''):
+        clipline, markline = [], []
+        clipline.append( '\t\t\t\t<clip src="{}" start="0" stop="{}" timeFormat="100ns_units" />'.format(source, self.series()) )
+        for timeline, flag in self.segment.items():
+            if flag:
+                markline.append( '\t\t\t\t<marker time="{}" timeFormat="100ns_units" flags="select_interval"/>'.format(timeline) )
             else:
-                lines.append( '\t\t\t\t<marker time="{}" timeFormat="100ns_units" />'.format(timeline) )
-        lines += ['\t\t\t</markers>', '\t\t\t<preview_streams video="0" audio="0" text="-1" />', '\t\t</view>','\t</timeline>','</timelines>']
-        fstring = '\n'.join(lines)
-        with open('{}.ssp'.format(outfile), 'w', encoding='utf-8') as f:
-            f.write(fstring)
-        print('已保存档案 {}.ssp'.format(outfile))
-
+                markline.append( '\t\t\t\t<marker time="{}" timeFormat="100ns_units" />'.format(timeline) )
+        template = """<timelines version="2" >
+    <timeline>
+        <group output="{}" >
+            <track video="1" audio="1" text="0" accuracy="frame" flags="interlaced_fields_alignment,keep_mpeg_closedcaptions,keep_rtp_hint_tracks" >
+{}
+            </track>
+        </group>
+        <view>
+            <markers>
+{}
+            </markers>
+            <preview_streams video="0" audio="0" text="-1" />
+        </view>
+    </timeline>
+</timelines>
+""".format( output, clipline[0], '\n'.join(markline) )
+        return template
 
 
 def __win32_event_filter__(msg, data):
@@ -80,40 +114,42 @@ def on_release(key):
         return False
     elif key == keyboard.Key.f12 or key == keyboard.Key.f9:
         ts.start()
-        print(key)
+        ts.logger(0, text="计时开始", type=0)
+        # print(key)
     elif key == keyboard.KeyCode.from_char('+'):
         ts.select()
-        print(key, '+')
+        # print(key, '+')
     else:
         if 96 < keycode < 106:
             second = keycode - 96
             ts.backout(second)
-            print('Num {}'.format(keycode))
+            # print('Num {}'.format(keycode))
         elif keycode == 96:
             ts.remove()
-            print('Zero')
+            # print('Zero')
         elif keycode == 110:
             ts.mark()
-            print('Dot')
+            # print('Dot')
 
 
-while True:
-    print('welcome! ')
-    ts = Timer()
+if __name__ == '__main__':
+    while True:
+        print('按 F9/F12 开始计时 ')
+        ts = Timer()
 
-    with keyboard.Listener(
-            on_release = on_release,
-            win32_event_filter = __win32_event_filter__) as listener:
-        listener.join()
+        with keyboard.Listener(
+                on_release = on_release,
+                win32_event_filter = __win32_event_filter__) as listener:
+            listener.join()
 
-    ts.print()
-    outfile = time.strftime("%y%m%d-%H%M",time.localtime())
-    filename = input('输入视频路径 > ')
-    if filename == '':
-        print('跳过')
-        continue
-    else:
-        filename = filename.strip('"')
-    ts.output_xml(filename=filename, outfile=outfile)
-
-
+        outfile = time.strftime("%y%m%d-%H%M",time.localtime())
+        filename = input('输入视频路径 > ')
+        if filename == '':
+            print('跳过')
+            continue
+        else:
+            dest = 'C:\\Users\\MowChan\\Desktop\\初中物理-{}.mp4'.format(input('初中物理 > '))
+            fstring = ts.generate(filename.strip('"'), dest)
+            with open('{}.ssp'.format(outfile), 'w', encoding='gbk') as f:
+                f.write(fstring)
+            print('已保存档案 {}.ssp'.format(outfile))
