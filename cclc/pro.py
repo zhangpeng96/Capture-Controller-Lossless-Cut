@@ -18,6 +18,7 @@ def _win32_event_filter_(msg, data):
         listener.suppress_event()
 
 def _release_event_(key):
+    global _time
     try:
         keycode = key.vk
     except AttributeError:
@@ -65,10 +66,6 @@ if __name__ == '__main__':
         ts = Timer()
         f_mode = input('选择当前的模式？\n{} [0]: '.format(_text_modes(_modes)) )
         f_mode = int(f_mode) if f_mode.isdigit() else 0
-        if f_mode < len(_modes):
-            conf = config[ _modes[f_mode] ]
-            _path_r = path.join( conf['record_dir'], strftime( conf['record_name'], _time ))
-            _path_p = path.join( conf['project_dir'], strftime( conf['project_name'], _time ))
 
         print('>> 按 {} 开始计时'.format(_options['start_key']))
         with keyboard.Listener(
@@ -80,6 +77,11 @@ if __name__ == '__main__':
             print('>> 跳过')
             continue
         else:
+            print(_time)
+            if f_mode < len(_modes):
+                conf = config[ _modes[f_mode] ]
+                _path_r = path.join( conf['record_dir'], strftime( conf['record_name'], _time ))
+                _path_p = path.join( conf['project_dir'], strftime( conf['project_name'], _time ))
             _pro_name = strftime( conf['project_name'], _time )
             _path_rec = path.join( conf['record_dir'], strftime( conf['record_name'], _time ))
             _path_pro = path.join( conf['project_dir'], strftime( conf['project_name'], _time ))
