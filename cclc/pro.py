@@ -9,6 +9,14 @@ from time import strftime, localtime
 
 config = configparser.ConfigParser(interpolation=None)
 config.read('config.ini', encoding='utf8')
+start_key = config['options']['start_key'].upper()
+end_key = config['options']['end_key'].upper()
+
+FKEY = {
+    'F1': keyboard.Key.f1,  'F2': keyboard.Key.f2,   'F3': keyboard.Key.f3,   'F4': keyboard.Key.f4,
+    'F5': keyboard.Key.f5,  'F6': keyboard.Key.f6,   'F7': keyboard.Key.f7,   'F8': keyboard.Key.f8,
+    'F9': keyboard.Key.f9, 'F10': keyboard.Key.f10, 'F11': keyboard.Key.f11, 'F12': keyboard.Key.f12
+}
 
 
 def _win32_event_filter_(msg, data):
@@ -23,9 +31,9 @@ def _release_event_(key):
         keycode = key.vk
     except AttributeError:
         keycode = key.value.vk
-    if key == keyboard.Key.f8:
+    if key == FKEY[end_key]:
         return False
-    elif key == keyboard.Key.f6:
+    elif key == FKEY[start_key]:
         ts.start()
         _time = localtime()
         ts.logger(0, text="计时开始", type=0)
@@ -49,6 +57,7 @@ def _text_modes(modes):
 
 if __name__ == '__main__':
     os.system('mode con: cols=80 lines=15')
+    # https://stackoverflow.com/questions/3646362/how-to-control-the-size-of-the-windows-shell-window-from-within-a-python-script
 
     _options, _time = config['options'], localtime()
     _modes = config.sections()
@@ -66,9 +75,6 @@ if __name__ == '__main__':
         ts = Timer()
         f_mode = input('选择当前的模式？\n{} [0]: '.format(_text_modes(_modes)) )
         f_mode = int(f_mode) if f_mode.isdigit() else 0
-        start_key = _options['start_key'].upper()
-        end_key = _options['end_key'].upper()
-
         print('>> 按 {} 开始计时，按 {} 停止计时'.format(start_key, end_key))
         with keyboard.Listener(
                 on_release = _release_event_,
