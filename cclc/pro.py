@@ -23,9 +23,9 @@ def _release_event_(key):
         keycode = key.vk
     except AttributeError:
         keycode = key.value.vk
-    if key == keyboard.Key.f12:
+    if key == keyboard.Key.f8:
         return False
-    elif key == keyboard.Key.f9:
+    elif key == keyboard.Key.f6:
         ts.start()
         _time = localtime()
         ts.logger(0, text="计时开始", type=0)
@@ -55,7 +55,7 @@ if __name__ == '__main__':
     _modes.remove('options')
 
     print('>>> CCLC')
-    f_capture = input('是否启动录制程序? [y]: ')
+    f_capture = input('是否启动录制程序? y/n [y]: ')
     if f_capture in ('1', 'y', 'Y'):
         _path = config['options']['capture_path']
         _dir, _ = path.split(_path)
@@ -66,18 +66,19 @@ if __name__ == '__main__':
         ts = Timer()
         f_mode = input('选择当前的模式？\n{} [0]: '.format(_text_modes(_modes)) )
         f_mode = int(f_mode) if f_mode.isdigit() else 0
+        start_key = _options['start_key'].upper()
+        end_key = _options['end_key'].upper()
 
-        print('>> 按 {} 开始计时'.format(_options['start_key']))
+        print('>> 按 {} 开始计时，按 {} 停止计时'.format(start_key, end_key))
         with keyboard.Listener(
                 on_release = _release_event_,
                 win32_event_filter = _win32_event_filter_) as listener:
             listener.join()
         name = input('输出视频文件名 (q 跳过): ')
-        if name == 'q':
+        if name in ('q', 'Q'):
             print('>> 跳过')
             continue
         else:
-            print(_time)
             if f_mode < len(_modes):
                 conf = config[ _modes[f_mode] ]
                 _path_r = path.join( conf['record_dir'], strftime( conf['record_name'], _time ))
@@ -90,6 +91,6 @@ if __name__ == '__main__':
             with open( _path_pro, 'w', encoding='gbk' ) as f:
                 f.write(fstring)
             print('>> 已保存档案'.format(_pro_name))
-            f_open = input('是否打开剪辑软件？ y/n [n]: ')
+            f_open = input('是否打开剪辑软件？ y/n [y]: ')
             if f_open in ('y', 'Y', ''):
                 subprocess.Popen([ _options['cutter_path'], _path_pro ])
